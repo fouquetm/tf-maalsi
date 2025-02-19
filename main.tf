@@ -65,16 +65,6 @@ resource "azurerm_mssql_server" "main" {
   administrator_login_password = random_password.mssql_password.result
 }
 
-resource "azurerm_mssql_database" "rabbitmqdemo" {
-  name         = "RabbitMqDemo"
-  server_id    = azurerm_mssql_server.main.id
-  collation    = "SQL_Latin1_General_CP1_CI_AS"
-  license_type = "LicenseIncluded"
-  max_size_gb  = 2
-  sku_name     = "Basic"
-  enclave_type = "VBS"
-}
-
 resource "azurerm_key_vault_secret" "mssql-login" {
   name         = "mssql-login"
   value        = var.mssql_login
@@ -85,6 +75,23 @@ resource "azurerm_key_vault_secret" "mssql-password" {
   name         = "mssql-password"
   value        = random_password.mssql_password.result
   key_vault_id = azurerm_key_vault.main.id
+}
+
+resource "azurerm_mssql_firewall_rule" "allow_azure_services" {
+  name             = "AllowAzureServices"
+  server_id        = azurerm_mssql_server.main.id
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
+}
+
+resource "azurerm_mssql_database" "rabbitmqdemo" {
+  name         = "RabbitMqDemo"
+  server_id    = azurerm_mssql_server.main.id
+  collation    = "SQL_Latin1_General_CP1_CI_AS"
+  license_type = "LicenseIncluded"
+  max_size_gb  = 2
+  sku_name     = "Basic"
+  enclave_type = "VBS"
 }
 
 resource "azurerm_key_vault_secret" "rabbitmqdemo-sql-connection-string" {
