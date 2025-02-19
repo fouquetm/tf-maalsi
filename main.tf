@@ -21,7 +21,8 @@ resource "azurerm_log_analytics_workspace" "main" {
 }
 
 resource "azurerm_storage_account" "main" {
-  name                     = "st${local.restricted_unique_base_name}"
+  count                    = 3
+  name                     = "st${local.restricted_unique_base_name}${count.index}"
   location                 = data.azurerm_resource_group.main.location
   resource_group_name      = data.azurerm_resource_group.main.name
   account_tier             = "Standard"
