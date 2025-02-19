@@ -46,3 +46,55 @@ resource "azurerm_key_vault_secret" "dummy-secret" {
   value        = "szechuan"
   key_vault_id = azurerm_key_vault.main.id
 }
+
+# mssql server creation
+resource "random_password" "mssql_password" {
+  length           = 16
+  special          = true
+  override_special = "_%@"
+}
+
+resource "random_string" "mssql_suffix" {
+  length  = 6
+  lower   = true
+  upper   = false
+  numeric = true
+  special = false
+}
+
+resource "azurerm_mssql_server" "main" {
+  name                         = "sqlsrv-${local.base_name}-${random_string.mssql_suffix.result}"
+  resource_group_name          = data.azurerm_resource_group.main.name
+  location                     = data.azurerm_resource_group.main.location
+  version                      = "12.0"
+  administrator_login          = var.mssql_login
+  administrator_login_password = random_password.mssql_password.result
+}
+
+resource "azurerm_mssql_database" "rabbitmqdemo" {
+  name         = "RabbitMqDemo"
+  server_id    = azurerm_mssql_server.main.id
+  collation    = "SQL_Latin1_General_CP1_CI_AS"
+  license_type = "LicenseIncluded"
+  max_size_gb  = 2
+  sku_name     = "Basic"
+  enclave_type = "VBS"
+}
+
+resource "azurerm_key_vault_secret" "mssql-login" {
+  name         = "mssql-login"
+  value        = var.mssql_login
+  key_vault_id = azurerm_key_vault.main.id
+}
+
+resource "azurerm_key_vault_secret" "mssql-password" {
+  name         = "mssql-password"
+  value        = random_password.mssql_password.result
+  key_vault_id = azurerm_key_vault.main.id
+}
+
+resource "azurerm_key_vault_secret" "rabbitmqdemo-sql-connection-string" {
+  name         = "rabbitmqdemo-sql-connection-string"
+  value        = "Server=tcp:${azurerm_mssql_server.main.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.rabbitmqdemo.name};Persist Security Info=False;User ID=${var.mssql_login};Password=${random_password.mssql_password.result};Connection Timeout=30;"
+  key_vault_id = azurerm_key_vault.main.id
+}
