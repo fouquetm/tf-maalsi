@@ -41,12 +41,6 @@ resource "azurerm_role_assignment" "kv_certs_admin" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
-resource "azurerm_key_vault_secret" "dummy-secret" {
-  name         = "secret-sauce"
-  value        = "szechuan"
-  key_vault_id = azurerm_key_vault.main.id
-}
-
 # mssql server creation
 resource "random_password" "mssql_password" {
   length           = 16
