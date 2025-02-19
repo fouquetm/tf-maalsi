@@ -18,3 +18,14 @@ variable "mssql_login" {
   type        = string
   sensitive   = true
 }
+
+variable "rabbitmq_login" {
+  description = "RabbitMQ admin login"
+  type        = string
+  sensitive   = true
+}
+
+variable "acr_name" {
+  description = "Azure Container Registry name"
+  type        = string
+}

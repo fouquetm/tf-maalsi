@@ -99,3 +99,70 @@ resource "azurerm_key_vault_secret" "rabbitmqdemo-sql-connection-string" {
   value        = "Server=tcp:${azurerm_mssql_server.main.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.rabbitmqdemo.name};Persist Security Info=False;User ID=${var.mssql_login};Password=${random_password.mssql_password.result};Connection Timeout=30;"
   key_vault_id = azurerm_key_vault.main.id
 }
+
+# rabbitmq creation
+resource "random_password" "rabbitmq_password" {
+  length           = 16
+  special          = true
+  override_special = "_%@"
+}
+
+resource "azurerm_key_vault_secret" "rabbitmq_login" {
+  name         = "rabbitmq-login"
+  value        = var.rabbitmq_login
+  key_vault_id = azurerm_key_vault.main.id
+}
+
+resource "azurerm_key_vault_secret" "rabbitmq-password" {
+  name         = "rabbitmq-password"
+  value        = random_password.rabbitmq_password.result
+  key_vault_id = azurerm_key_vault.main.id
+}
+
+resource "azurerm_container_group" "rabbitmq" {
+  name                = "ci-${local.base_name}-rbmq"
+  location            = data.azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  ip_address_type     = "Public"
+  dns_name_label      = "ci-${local.base_name}-rbmq"
+  os_type             = "Linux"
+
+  image_registry_credential {
+    server   = data.azurerm_container_registry.main.login_server
+    username = data.azurerm_container_registry.main.admin_username
+    password = data.azurerm_container_registry.main.admin_password
+  }
+
+  exposed_port = [
+    {
+      port     = 5672
+      protocol = "TCP"
+    },
+    {
+      port     = 15672
+      protocol = "TCP"
+    }
+  ]
+
+  container {
+    name   = "rabbitmq"
+    image  = "acrmaalsimfolabs.azurecr.io/rabbitmq:3-management"
+    cpu    = "0.5"
+    memory = "1.5"
+
+    ports {
+      port     = 5672
+      protocol = "TCP"
+    }
+
+    ports {
+      port     = 15672
+      protocol = "TCP"
+    }
+
+    secure_environment_variables = {
+      "RABBITMQ_DEFAULT_USER" = var.rabbitmq_login
+      "RABBITMQ_DEFAULT_PASS" = random_password.rabbitmq_password.result
+    }
+  }
+}
