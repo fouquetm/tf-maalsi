@@ -166,3 +166,48 @@ resource "azurerm_container_group" "rabbitmq" {
     }
   }
 }
+
+# api web app creation
+resource "azurerm_service_plan" "main" {
+  name                = "asp-${local.base_name}"
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
+  os_type             = "Linux"
+  sku_name            = "B1"
+}
+
+resource "random_string" "api_suffix" {
+  length  = 6
+  lower   = true
+  upper   = false
+  numeric = true
+  special = false
+}
+
+resource "azurerm_linux_web_app" "api" {
+  name                = "api-${local.base_name}-${random_string.api_suffix.result}"
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
+  service_plan_id     = azurerm_service_plan.main.id
+
+  site_config {
+    application_stack {
+      docker_image_name        = "matthieuf/pubsub-api:1.3"
+      docker_registry_url      = "https://${data.azurerm_container_registry.main.login_server}"
+      docker_registry_username = data.azurerm_container_registry.main.admin_username
+      docker_registry_password = data.azurerm_container_registry.main.admin_password
+    }
+  }
+
+  connection_string {
+    name  = "DefaultConnection"
+    type  = "SQLAzure"
+    value = azurerm_key_vault_secret.rabbitmqdemo-sql-connection-string.value
+  }
+
+  app_settings = {
+    "RabbitMQ__Hostname" = azurerm_container_group.rabbitmq.fqdn
+    "RabbitMQ__Username" = var.rabbitmq_login
+    "RabbitMQ__Password" = random_password.rabbitmq_password.result
+  }
+}

@@ -13,3 +13,8 @@ output "rabbitmq_webui_url" {
   description = "URL of the RabbitMQ Management Web UI"
   value       = "http://${azurerm_container_group.rabbitmq.fqdn}:15672/"
 }
+
+output "api_url" {
+  description = "URL of the API"
+  value       = "https://${azurerm_linux_web_app.api.default_hostname}/api/Product/productlist"
+}
