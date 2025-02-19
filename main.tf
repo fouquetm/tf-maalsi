@@ -2,6 +2,14 @@
 locals {
   base_name = "${var.project}-${var.environment}"
   restricted_base_name = lower(replace(local.base_name, "-", ""))
+  restricted_unique_base_name = "${local.restricted_base_name}${random_string.unique_suffix.result}"
+}
+
+resource "random_string" "unique_suffix" {
+  length = 6
+  special = false
+  upper = false
+  numeric = true
 }
 
 resource "azurerm_log_analytics_workspace" "main" {
@@ -12,17 +20,10 @@ resource "azurerm_log_analytics_workspace" "main" {
   retention_in_days   = 30
 }
 
-resource "random_string" "storage_account_suffix" {
-  length = 6
-  special = false
-  upper = false
-  numeric = true
-}
-
 resource "azurerm_storage_account" "main" {
-  name                     = "st${local.restricted_base_name}${random_string.storage_account_suffix.result}"
+  name                     = "st${local.restricted_unique_base_name}"
   location                 = data.azurerm_resource_group.main.location
   resource_group_name      = data.azurerm_resource_group.main.name
   account_tier             = "Standard"
-  account_replication_type = "GRS"
+  account_replication_type = "LRS"
 }
