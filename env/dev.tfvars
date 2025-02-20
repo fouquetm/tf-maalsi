@@ -1,0 +1,6 @@
+subscription_id = "MY_SUBSCRIPTION_ID"
+project = "maalsi-24"
+environment = "dev"
+mssql_login = "sqladmin"
+rabbitmq_login = "admin"
+acr_name = "MY_ACR_NAME"
