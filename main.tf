@@ -3,42 +3,38 @@ locals {
 }
 
 # key vault creation
-resource "random_string" "kv_name" {
-  length  = 6
-  lower   = true
-  upper   = false
-  numeric = true
-  special = false
+module "key_vault" {
+  source              = "./modules/key_vault"
+  base_name           = local.base_name
+  location            = data.azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+  owner_object_id     = data.azurerm_client_config.current.object_id
 }
 
-resource "azurerm_key_vault" "main" {
-  name                        = "kv-${local.base_name}-${random_string.kv_name.result}"
-  location                    = data.azurerm_resource_group.main.location
-  resource_group_name         = data.azurerm_resource_group.main.name
-  enabled_for_disk_encryption = true
-  tenant_id                   = data.azurerm_client_config.current.tenant_id
-  soft_delete_retention_days  = 7
-  purge_protection_enabled    = false
-  sku_name                    = "standard"
-  enable_rbac_authorization   = true
+moved {
+  from = random_string.kv_name
+  to   = module.key_vault.random_string.kv_name
 }
 
-resource "azurerm_role_assignment" "kv_secrets_admin" {
-  scope                = azurerm_key_vault.main.id
-  role_definition_name = "Key Vault Secrets Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
+moved {
+  from = azurerm_key_vault.main
+  to   = module.key_vault.azurerm_key_vault.main
 }
 
-resource "azurerm_role_assignment" "kv_keys_admin" {
-  scope                = azurerm_key_vault.main.id
-  role_definition_name = "Key Vault Crypto Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
+moved {
+  from = azurerm_role_assignment.kv_secrets_admin
+  to   = module.key_vault.azurerm_role_assignment.kv_secrets_admin
 }
 
-resource "azurerm_role_assignment" "kv_certs_admin" {
-  scope                = azurerm_key_vault.main.id
-  role_definition_name = "Key Vault Certificates Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
+moved {
+  from = azurerm_role_assignment.kv_keys_admin
+  to   = module.key_vault.azurerm_role_assignment.kv_keys_admin
+}
+
+moved {
+  from = azurerm_role_assignment.kv_certs_admin
+  to   = module.key_vault.azurerm_role_assignment.kv_certs_admin
 }
 
 # mssql server creation
@@ -68,20 +64,20 @@ resource "azurerm_mssql_server" "main" {
 resource "azurerm_key_vault_secret" "mssql-login" {
   name         = "mssql-login"
   value        = var.mssql_login
-  key_vault_id = azurerm_key_vault.main.id
+  key_vault_id = module.key_vault.key_vault_id
 
   depends_on = [
-    azurerm_role_assignment.kv_secrets_admin
+    module.key_vault
   ]
 }
 
 resource "azurerm_key_vault_secret" "mssql-password" {
   name         = "mssql-password"
   value        = random_password.mssql_password.result
-  key_vault_id = azurerm_key_vault.main.id
+  key_vault_id = module.key_vault.key_vault_id
 
   depends_on = [
-    azurerm_role_assignment.kv_secrets_admin
+    module.key_vault
   ]
 }
 
@@ -105,7 +101,7 @@ resource "azurerm_mssql_database" "rabbitmqdemo" {
 resource "azurerm_key_vault_secret" "rabbitmqdemo-sql-connection-string" {
   name         = "rabbitmqdemo-sql-connection-string"
   value        = "Server=tcp:${azurerm_mssql_server.main.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.rabbitmqdemo.name};Persist Security Info=False;User ID=${var.mssql_login};Password=${random_password.mssql_password.result};Connection Timeout=30;"
-  key_vault_id = azurerm_key_vault.main.id
+  key_vault_id = module.key_vault.key_vault_id
 }
 
 # rabbitmq creation
@@ -118,20 +114,20 @@ resource "random_password" "rabbitmq_password" {
 resource "azurerm_key_vault_secret" "rabbitmq_login" {
   name         = "rabbitmq-login"
   value        = var.rabbitmq_login
-  key_vault_id = azurerm_key_vault.main.id
+  key_vault_id = module.key_vault.key_vault_id
 
   depends_on = [
-    azurerm_role_assignment.kv_secrets_admin
+    module.key_vault
   ]
 }
 
 resource "azurerm_key_vault_secret" "rabbitmq-password" {
   name         = "rabbitmq-password"
   value        = random_password.rabbitmq_password.result
-  key_vault_id = azurerm_key_vault.main.id
+  key_vault_id = module.key_vault.key_vault_id
 
   depends_on = [
-    azurerm_role_assignment.kv_secrets_admin
+    module.key_vault
   ]
 }
 
