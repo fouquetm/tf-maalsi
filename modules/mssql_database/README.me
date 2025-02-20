@@ -1,0 +1,26 @@
+With MSSQL Server creation
+```
+module "mssql_database" {
+  source              = "./modules/mssql_database"
+  base_name           = local.base_name
+  mssql_login         = var.mssql_login
+  key_vault_id        = module.key_vault.key_vault_id
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
+  mssql_server_name   = data.azurerm_mssql_server.main.name
+  database_name       = "RabbitMqDemo"
+}
+```
+
+Without MSSQL Server creation
+```
+module "mssql_database" {
+  source              = "./modules/mssql_database"
+  base_name           = local.base_name
+  mssql_login         = var.mssql_login
+  key_vault_id        = module.key_vault.key_vault_id
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
+  database_name       = "RabbitMqDemo"
+}
+```

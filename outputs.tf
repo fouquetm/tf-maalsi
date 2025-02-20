@@ -1,7 +1,7 @@
 # définir les valeurs de sortie de Terraform
 output "azurerm_mssql_server_fqdn" {
   description = "Fully qualified domain name of the SQL Server"
-  value       = azurerm_mssql_server.main.fully_qualified_domain_name
+  value       = module.mssql_database.mssql_server_fqdn
 }
 
 output "azurerm_ci_rabbitmq_fqdn" {

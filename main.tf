@@ -38,70 +38,49 @@ moved {
 }
 
 # mssql server creation
-resource "random_password" "mssql_password" {
-  length           = 16
-  special          = true
-  override_special = "_%@"
+module "mssql_database" {
+  source              = "./modules/mssql_database"
+  base_name           = local.base_name
+  mssql_login         = var.mssql_login
+  key_vault_id        = module.key_vault.key_vault_id
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
+  database_name       = "RabbitMqDemo"
 }
 
-resource "random_string" "mssql_suffix" {
-  length  = 6
-  lower   = true
-  upper   = false
-  numeric = true
-  special = false
+moved {
+  from = random_string.mssql_suffix
+  to   = module.mssql_database.random_string.mssql_suffix[0]
 }
 
-resource "azurerm_mssql_server" "main" {
-  name                         = "sqlsrv-${local.base_name}-${random_string.mssql_suffix.result}"
-  resource_group_name          = data.azurerm_resource_group.main.name
-  location                     = data.azurerm_resource_group.main.location
-  version                      = "12.0"
-  administrator_login          = var.mssql_login
-  administrator_login_password = random_password.mssql_password.result
+moved {
+  from = random_password.mssql_password
+  to   = module.mssql_database.random_password.mssql_password[0]
 }
 
-resource "azurerm_key_vault_secret" "mssql-login" {
-  name         = "mssql-login"
-  value        = var.mssql_login
-  key_vault_id = module.key_vault.key_vault_id
-
-  depends_on = [
-    module.key_vault
-  ]
+moved {
+  from = azurerm_mssql_server.main
+  to   = module.mssql_database.azurerm_mssql_server.main[0]
 }
 
-resource "azurerm_key_vault_secret" "mssql-password" {
-  name         = "mssql-password"
-  value        = random_password.mssql_password.result
-  key_vault_id = module.key_vault.key_vault_id
-
-  depends_on = [
-    module.key_vault
-  ]
+moved {
+  from = azurerm_mssql_firewall_rule.allow_azure_services
+  to   = module.mssql_database.azurerm_mssql_firewall_rule.allow_azure_services[0]
 }
 
-resource "azurerm_mssql_firewall_rule" "allow_azure_services" {
-  name             = "AllowAzureServices"
-  server_id        = azurerm_mssql_server.main.id
-  start_ip_address = "0.0.0.0"
-  end_ip_address   = "0.0.0.0"
+moved {
+  from = azurerm_key_vault_secret.mssql-login
+  to   = module.mssql_database.azurerm_key_vault_secret.mssql-login[0]
 }
 
-resource "azurerm_mssql_database" "rabbitmqdemo" {
-  name         = "RabbitMqDemo"
-  server_id    = azurerm_mssql_server.main.id
-  collation    = "SQL_Latin1_General_CP1_CI_AS"
-  license_type = "LicenseIncluded"
-  max_size_gb  = 2
-  sku_name     = "Basic"
-  enclave_type = "VBS"
+moved {
+  from = azurerm_key_vault_secret.mssql-password
+  to   = module.mssql_database.azurerm_key_vault_secret.mssql-password[0]
 }
 
-resource "azurerm_key_vault_secret" "rabbitmqdemo-sql-connection-string" {
-  name         = "rabbitmqdemo-sql-connection-string"
-  value        = "Server=tcp:${azurerm_mssql_server.main.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.rabbitmqdemo.name};Persist Security Info=False;User ID=${var.mssql_login};Password=${random_password.mssql_password.result};Connection Timeout=30;"
-  key_vault_id = module.key_vault.key_vault_id
+moved {
+  from = azurerm_mssql_database.rabbitmqdemo
+  to   = module.mssql_database.azurerm_mssql_database.main
 }
 
 # rabbitmq creation
@@ -214,7 +193,7 @@ resource "azurerm_linux_web_app" "api" {
   connection_string {
     name  = "DefaultConnection"
     type  = "SQLAzure"
-    value = azurerm_key_vault_secret.rabbitmqdemo-sql-connection-string.value
+    value = module.mssql_database.database-sql-connection-string
   }
 
   app_settings = {
