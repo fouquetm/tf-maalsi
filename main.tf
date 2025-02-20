@@ -69,12 +69,20 @@ resource "azurerm_key_vault_secret" "mssql-login" {
   name         = "mssql-login"
   value        = var.mssql_login
   key_vault_id = azurerm_key_vault.main.id
+
+  depends_on = [
+    azurerm_role_assignment.kv_secrets_admin
+  ]
 }
 
 resource "azurerm_key_vault_secret" "mssql-password" {
   name         = "mssql-password"
   value        = random_password.mssql_password.result
   key_vault_id = azurerm_key_vault.main.id
+
+  depends_on = [
+    azurerm_role_assignment.kv_secrets_admin
+  ]
 }
 
 resource "azurerm_mssql_firewall_rule" "allow_azure_services" {
@@ -111,12 +119,20 @@ resource "azurerm_key_vault_secret" "rabbitmq_login" {
   name         = "rabbitmq-login"
   value        = var.rabbitmq_login
   key_vault_id = azurerm_key_vault.main.id
+
+  depends_on = [
+    azurerm_role_assignment.kv_secrets_admin
+  ]
 }
 
 resource "azurerm_key_vault_secret" "rabbitmq-password" {
   name         = "rabbitmq-password"
   value        = random_password.rabbitmq_password.result
   key_vault_id = azurerm_key_vault.main.id
+
+  depends_on = [
+    azurerm_role_assignment.kv_secrets_admin
+  ]
 }
 
 resource "azurerm_container_group" "rabbitmq" {
@@ -209,5 +225,36 @@ resource "azurerm_linux_web_app" "api" {
     "RabbitMQ__Hostname" = azurerm_container_group.rabbitmq.fqdn
     "RabbitMQ__Username" = var.rabbitmq_login
     "RabbitMQ__Password" = random_password.rabbitmq_password.result
+  }
+}
+
+# console creation
+resource "azurerm_container_group" "console" {
+  name                = "ci-${local.base_name}-console"
+  location            = data.azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  ip_address_type     = "None"
+  os_type             = "Linux"
+
+  image_registry_credential {
+    server   = data.azurerm_container_registry.main.login_server
+    username = data.azurerm_container_registry.main.admin_username
+    password = data.azurerm_container_registry.main.admin_password
+  }
+
+  container {
+    name   = "console"
+    image  = "acrmaalsimfolabs.azurecr.io/matthieuf/pubsub-console:1.0"
+    cpu    = "0.5"
+    memory = "1.5"
+
+    environment_variables = {
+      "RabbitMQ__Hostname" = azurerm_container_group.rabbitmq.fqdn
+    }
+
+    secure_environment_variables = {
+      "RabbitMQ__Username" = var.rabbitmq_login
+      "RabbitMQ__Password" = random_password.rabbitmq_password.result
+    }
   }
 }
