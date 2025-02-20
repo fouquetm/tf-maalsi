@@ -12,31 +12,6 @@ module "key_vault" {
   owner_object_id     = data.azurerm_client_config.current.object_id
 }
 
-moved {
-  from = random_string.kv_name
-  to   = module.key_vault.random_string.kv_name
-}
-
-moved {
-  from = azurerm_key_vault.main
-  to   = module.key_vault.azurerm_key_vault.main
-}
-
-moved {
-  from = azurerm_role_assignment.kv_secrets_admin
-  to   = module.key_vault.azurerm_role_assignment.kv_secrets_admin
-}
-
-moved {
-  from = azurerm_role_assignment.kv_keys_admin
-  to   = module.key_vault.azurerm_role_assignment.kv_keys_admin
-}
-
-moved {
-  from = azurerm_role_assignment.kv_certs_admin
-  to   = module.key_vault.azurerm_role_assignment.kv_certs_admin
-}
-
 # mssql server creation
 module "mssql_database" {
   source              = "./modules/mssql_database"
@@ -46,41 +21,6 @@ module "mssql_database" {
   resource_group_name = data.azurerm_resource_group.main.name
   location            = data.azurerm_resource_group.main.location
   database_name       = "RabbitMqDemo"
-}
-
-moved {
-  from = random_string.mssql_suffix
-  to   = module.mssql_database.random_string.mssql_suffix[0]
-}
-
-moved {
-  from = random_password.mssql_password
-  to   = module.mssql_database.random_password.mssql_password[0]
-}
-
-moved {
-  from = azurerm_mssql_server.main
-  to   = module.mssql_database.azurerm_mssql_server.main[0]
-}
-
-moved {
-  from = azurerm_mssql_firewall_rule.allow_azure_services
-  to   = module.mssql_database.azurerm_mssql_firewall_rule.allow_azure_services[0]
-}
-
-moved {
-  from = azurerm_key_vault_secret.mssql-login
-  to   = module.mssql_database.azurerm_key_vault_secret.mssql-login[0]
-}
-
-moved {
-  from = azurerm_key_vault_secret.mssql-password
-  to   = module.mssql_database.azurerm_key_vault_secret.mssql-password[0]
-}
-
-moved {
-  from = azurerm_mssql_database.rabbitmqdemo
-  to   = module.mssql_database.azurerm_mssql_database.main
 }
 
 # rabbitmq creation
