@@ -8,6 +8,12 @@ terraform {
       version = "4.19.0"
     }
   }
+  backend "azurerm" {
+    resource_group_name  = null
+    storage_account_name = null
+    container_name       = "tfstates"
+    key                  = "pub-sub.tfstate"
+  }
 }
 
 provider "azurerm" {
